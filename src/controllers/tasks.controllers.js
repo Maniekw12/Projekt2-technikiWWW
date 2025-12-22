@@ -7,9 +7,19 @@ const getTasks = async (req, res) => {
 
 const createTask = async (req, res) => {
     const { title } = req.body;
-    if (!title) return res.status(400).json({ error: 'Title is required' });
-    const task = await service.createTask(title);
-    res.status(201).json(task);
+
+    if(!title || !title.trim()){
+        return res.status(400).json({error: 'Please enter title.'});
+    }
+
+    try{
+        const task = await service.createTask(title);
+        res.status(201).json(task);
+    }catch(err){
+        console.error("Error: ",err);
+        res.status(500).json({error: 'Something went wrong'});
+    }
+
 };
 
 const deleteTask = async (req, res) => {

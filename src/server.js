@@ -3,7 +3,6 @@ const { initDatabase } = require('./db/db');
 
 const PORT = 3000;
 
-// Inicjalizacja bazy danych przed uruchomieniem serwera
 initDatabase()
     .then(() => {
         app.listen(PORT, () => {

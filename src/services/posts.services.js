@@ -30,6 +30,24 @@ const getPosts = async (page = 1, limit = 10, sort = 'desc') => {
     return result.rows;
 };
 
+const getPostById = async (id) => {
+    const result = await pool.query(
+        `SELECT
+             posts.id,
+             posts.title,
+             posts.content,
+             posts.author_id,
+             posts.created_at,
+             posts.updated_at,
+             users.username as author_name
+         FROM posts
+                  LEFT JOIN users ON posts.author_id = users.id
+         WHERE posts.id = $1`,
+        [id]
+    );
+    return result.rows[0];
+};
+
 const deletePost = async (id) => {
     const result = await pool.query(
         `DELETE FROM posts WHERE id = $1 RETURNING *`,
@@ -49,4 +67,4 @@ const updatePost = async (id, title, content) => {
     return result.rows[0];
 }
 
-module.exports = { createPost, getPosts, deletePost, updatePost };
+module.exports = { createPost, getPosts, getPostById, deletePost, updatePost };

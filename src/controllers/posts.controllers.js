@@ -1,4 +1,4 @@
-const { createPost, getPosts, deletePost } = require('../services/posts.services');
+const { createPost, getPosts, deletePost, updatePost } = require('../services/posts.services');
 
 const addPost = async (req, res) => {
     const { title, content, authorId } = req.body;
@@ -47,7 +47,32 @@ const removePost = async (req, res) => {
         console.error('Error during deleting post:', err);
         res.status(500).json({ error: 'Something went wrong' });
     }
+};
 
-}
+const editPost = async (req, res) => {
+    const postId = parseInt(req.params.id);
+    const { title, content } = req.body;
 
-module.exports = { addPost, listPosts, removePost };
+    if (isNaN(postId)) {
+        return res.status(400).json({ error: 'Incorrect post id' });
+    }
+
+    if (!title || !content) {
+        return res.status(400).json({ error: 'Title and content are required' });
+    }
+    try {
+        const updated = await updatePost(postId, title, content);
+        if (!updated) {
+            return res.status(404).json({ error: 'Post doesn\'t exist' });
+        }
+        res.status(200).json(updated);
+    } catch (err) {
+        console.error('Error:', err);
+        res.status(500).json({ error: 'Something went wrong' });
+    }
+
+
+};
+
+
+module.exports = { addPost, listPosts, removePost, editPost };

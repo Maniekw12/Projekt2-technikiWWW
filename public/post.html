@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <title>Szczegóły posta</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<h1 id="title"></h1>
+<p id="content"></p>
+<button onclick="window.history.back()">Powrót</button>
+
+<script>
+    async function loadPost() {
+        const params = new URLSearchParams(window.location.search);
+        const id = params.get('id');
+        if (!id) return;
+
+        const res = await fetch(`http://localhost:3000/api/posts/${id}`);
+        const post = await res.json();
+
+        document.getElementById('title').textContent = post.title;
+        document.getElementById('content').textContent = post.content;
+    }
+
+    loadPost();
+</script>
+</body>
+</html>

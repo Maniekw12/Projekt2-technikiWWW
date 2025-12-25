@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <title>Lista postów</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<h1>Lista postów</h1>
+<div id="status">Ładowanie...</div>
+<ul id="posts"></ul>
+
+<script>
+    async function loadPosts() {
+        const statusDiv = document.getElementById('status');
+        const ul = document.getElementById('posts');
+
+        try {
+            console.log('Próba pobrania postów...');
+            const res = await fetch('http://localhost:3000/api/posts');
+            console.log('Response status:', res.status);
+
+            if (!res.ok) {
+                throw new Error(`HTTP error! status: ${res.status}`);
+            }
+
+            const posts = await res.json();
+            console.log('Pobrane posty:', posts);
+
+            statusDiv.style.display = 'none';
+            ul.innerHTML = '';
+
+            if (posts.length === 0) {
+                ul.innerHTML = '<li>Brak postów do wyświetlenia</li>';
+                return;
+            }
+
+            posts.forEach(post => {
+                const li = document.createElement('li');
+
+                const titleSpan = document.createElement('span');
+                titleSpan.textContent = post.title;
+                titleSpan.className = 'post-title';
+
+                const authorSpan = document.createElement('span');
+                authorSpan.textContent = post.author_name ? ` - ${post.author_name}` : ' - Brak autora';
+                authorSpan.className = 'post-author';
+
+                li.appendChild(titleSpan);
+                li.appendChild(authorSpan);
+                li.style.cursor = 'pointer';
+                li.onclick = () => {
+                    window.location.href = `post.html?id=${post.id}`;
+                };
+                ul.appendChild(li);
+            });
+        } catch (error) {
+            console.error('Błąd podczas ładowania postów:', error);
+            statusDiv.textContent = 'Błąd: ' + error.message;
+            statusDiv.style.color = 'red';
+            ul.innerHTML = '<li>Nie można załadować postów. Sprawdź czy backend działa na localhost:3000</li>';
+        }
+    }
+
+    loadPosts();
+</script>
+</body>
+</html>

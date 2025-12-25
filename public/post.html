@@ -7,182 +7,102 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<div class="container post-detail">
-    <h1 id="title">Ładowanie...</h1>
 
-    <div class="post-meta">
-        <div class="post-author-detail">
-            ✍️ Autor: <span id="author">-</span>
-        </div>
-        <div class="post-date">
-            📅 <span id="date">-</span>
-        </div>
+<nav class="navbar">
+    <a href="index.html" class="logo">BlogApp ✨</a>
+    <div class="nav-links">
+        <a href="index.html">← Wróć</a>
     </div>
+</nav>
 
-    <div class="post-content" id="content">
-        Ładowanie treści...
-    </div>
-
-    <div class="comments-section">
-        <h2>💬 Komentarze</h2>
-
-        <div class="comment-form">
-            <textarea id="commentContent" placeholder="Dodaj komentarz..." rows="3"></textarea>
-            <input type="text" id="commentAuthor" placeholder="Twoje imię (opcjonalne)">
-            <button onclick="addComment()">Dodaj komentarz</button>
+<div class="container">
+    <div class="post-detail-container">
+        <div class="detail-header">
+            <h1 id="title">Ładowanie...</h1>
+            <div class="detail-meta">
+                Autor: <span id="author" class="author-badge">-</span> •
+                <span id="date">-</span>
+            </div>
         </div>
 
-        <div id="commentsList">
-            <p style="text-align: center; color: #718096;">Ładowanie komentarzy...</p>
+        <div id="content" class="detail-content">
+            Ładowanie treści...
         </div>
-    </div>
 
-    <div class="back-button-container">
-        <button onclick="window.location.href='index.html'">
-            ← Powrót do listy
-        </button>
+        <div class="comments-section">
+            <h3 style="margin-bottom: 20px;">💬 Komentarze</h3>
+
+            <div class="form-group">
+                <textarea id="commentContent" rows="3" placeholder="Napisz komentarz..."></textarea>
+            </div>
+            <div class="form-group" style="display: flex; gap: 10px;">
+                <input type="text" id="commentAuthor" placeholder="Twoje imię (opcjonalne)">
+                <button onclick="addComment()">Wyślij</button>
+            </div>
+
+            <div id="commentsList"></div>
+        </div>
     </div>
 </div>
 
 <script>
-    let currentPostId = null;
+    const urlParams = new URLSearchParams(window.location.search);
+    const postId = urlParams.get('id');
 
     async function loadPost() {
-        const params = new URLSearchParams(window.location.search);
-        const id = params.get('id');
-        currentPostId = id;
-
-        if (!id) {
-            document.getElementById('title').textContent = 'Błąd';
-            document.getElementById('content').textContent = 'Nie podano ID posta';
-            return;
-        }
-
+        if (!postId) return;
         try {
-            const res = await fetch(`http://localhost:3000/api/posts/${id}`);
-
-            if (!res.ok) {
-                throw new Error(`Nie znaleziono posta (status: ${res.status})`);
-            }
-
+            const res = await fetch(`http://localhost:3000/api/posts/${postId}`);
             const post = await res.json();
 
             document.getElementById('title').textContent = post.title;
             document.getElementById('content').textContent = post.content;
-            document.getElementById('author').textContent = post.author_name || 'Nieznany';
-
-            if (post.created_at) {
-                const date = new Date(post.created_at);
-                document.getElementById('date').textContent = date.toLocaleDateString('pl-PL', {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit'
-                });
-            }
+            document.getElementById('author').textContent = post.author_name || 'Anonim';
+            document.getElementById('date').textContent = new Date(post.created_at).toLocaleDateString('pl-PL');
 
             loadComments();
-        } catch (error) {
-            console.error('Błąd podczas ładowania posta:', error);
-            document.getElementById('title').textContent = '❌ Błąd';
-            document.getElementById('content').textContent = error.message;
-            document.getElementById('content').style.borderLeftColor = '#e53e3e';
-            document.getElementById('content').style.background = '#fff5f5';
+        } catch (err) {
+            document.getElementById('title').textContent = 'Błąd';
+            document.getElementById('content').textContent = 'Nie znaleziono posta.';
         }
     }
 
     async function loadComments() {
         try {
-            const res = await fetch(`http://localhost:3000/api/comments/post/${currentPostId}`);
+            const res = await fetch(`http://localhost:3000/api/comments/post/${postId}`);
             const comments = await res.json();
+            const list = document.getElementById('commentsList');
+            list.innerHTML = '';
 
-            const commentsList = document.getElementById('commentsList');
-            commentsList.innerHTML = '';
-
-            if (comments.length === 0) {
-                commentsList.innerHTML = '<p style="text-align: center; color: #718096;">Brak komentarzy. Bądź pierwszy!</p>';
-                return;
-            }
-
-            comments.forEach(comment => {
-                const commentDiv = document.createElement('div');
-                commentDiv.className = 'comment';
-
-                const commentHeader = document.createElement('div');
-                commentHeader.className = 'comment-header';
-
-                const authorSpan = document.createElement('span');
-                authorSpan.className = 'comment-author';
-                authorSpan.textContent = comment.author_name || 'Anonim';
-
-                const dateSpan = document.createElement('span');
-                dateSpan.className = 'comment-date';
-                const commentDate = new Date(comment.created_at);
-                dateSpan.textContent = commentDate.toLocaleDateString('pl-PL', {
-                    year: 'numeric',
-                    month: 'short',
-                    day: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit'
-                });
-
-                commentHeader.appendChild(authorSpan);
-                commentHeader.appendChild(dateSpan);
-
-                const commentContent = document.createElement('div');
-                commentContent.className = 'comment-content';
-                commentContent.textContent = comment.content;
-
-                commentDiv.appendChild(commentHeader);
-                commentDiv.appendChild(commentContent);
-                commentsList.appendChild(commentDiv);
+            comments.forEach(c => {
+                const div = document.createElement('div');
+                div.className = 'comment';
+                div.innerHTML = `
+                        <div class="comment-header">
+                            <span class="comment-author">${c.author_name || 'Gość'}</span>
+                            <span>${new Date(c.created_at).toLocaleDateString()}</span>
+                        </div>
+                        <div>${c.content}</div>
+                    `;
+                list.appendChild(div);
             });
-        } catch (error) {
-            console.error('Błąd podczas ładowania komentarzy:', error);
-            document.getElementById('commentsList').innerHTML = '<p style="color: #e53e3e;">Nie można załadować komentarzy</p>';
-        }
+        } catch (e) { console.error(e); }
     }
 
     async function addComment() {
-        const content = document.getElementById('commentContent').value.trim();
-        const authorName = document.getElementById('commentAuthor').value.trim();
+        const content = document.getElementById('commentContent').value;
+        const author = document.getElementById('commentAuthor').value; // Tymczasowo, później weźmiemy z logowania
 
-        if (!content) {
-            alert('Treść komentarza nie może być pusta!');
-            return;
-        }
+        if(!content) return alert("Wpisz treść!");
 
-        try {
-            let authorId = null;
+        await fetch('http://localhost:3000/api/comments', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ content, postId, authorId: null }) // authorId null bo nie mamy jeszcze logowania
+        });
 
-            if (authorName) {
-            }
-
-            const res = await fetch('http://localhost:3000/api/comments', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    content: content,
-                    postId: currentPostId,
-                    authorId: authorId
-                })
-            });
-
-            if (!res.ok) {
-                throw new Error('Nie udało się dodać komentarza');
-            }
-
-            document.getElementById('commentContent').value = '';
-            document.getElementById('commentAuthor').value = '';
-
-            loadComments();
-        } catch (error) {
-            console.error('Błąd podczas dodawania komentarza:', error);
-            alert('Nie udało się dodać komentarza. Spróbuj ponownie.');
-        }
+        document.getElementById('commentContent').value = '';
+        loadComments();
     }
 
     loadPost();

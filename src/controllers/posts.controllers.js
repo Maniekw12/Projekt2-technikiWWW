@@ -1,4 +1,4 @@
-const { createPost, getPosts, getPostById, deletePost, updatePost } = require('../services/posts.services');
+const { createPost, getPosts, getPostById, deletePost, updatePost, getPostsByAuthorId } = require('../services/posts.services');
 
 const addPost = async (req, res) => {
     const { title, content, authorId } = req.body;
@@ -91,4 +91,14 @@ const editPost = async (req, res) => {
     }
 };
 
-module.exports = { addPost, listPosts, getPost, removePost, editPost };
+const listAuthorPosts = async (req, res) => {
+    const { id } = req.params;
+    try {
+        const posts = await getPostsByAuthorId(id);
+        res.status(200).json(posts);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Błąd serwera' });
+    }
+};
+module.exports = { addPost, listPosts, getPost, removePost, editPost, listAuthorPosts};

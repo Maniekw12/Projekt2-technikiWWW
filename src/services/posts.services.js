@@ -67,4 +67,17 @@ const updatePost = async (id, title, content) => {
     return result.rows[0];
 }
 
-module.exports = { createPost, getPosts, getPostById, deletePost, updatePost };
+
+const getPostsByAuthorId = async (authorId) => {
+    const query = `
+        SELECT p.*, u.username as author_name 
+        FROM posts p 
+        JOIN users u ON p.author_id = u.id 
+        WHERE p.author_id = $1 
+        ORDER BY p.created_at DESC
+    `;
+    const { rows } = await pool.query(query, [authorId]);
+    return rows;
+};
+
+module.exports = { createPost, getPosts, getPostById, deletePost, updatePost, getPostsByAuthorId };

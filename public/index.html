@@ -2,66 +2,81 @@
 <html lang="pl">
 <head>
     <meta charset="UTF-8">
-    <title>Lista postów</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BlogApp - Główna</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<h1>Lista postów</h1>
-<div id="status">Ładowanie...</div>
-<ul id="posts"></ul>
+
+<nav class="navbar">
+    <a href="index.html" class="logo">BlogApp ✨</a>
+    <div class="nav-links">
+        <a href="index.html">Posty</a>
+        <a href="users.html">Autorzy</a>
+        <a href="login.html" class="btn-auth">Zaloguj</a>
+    </div>
+</nav>
+
+<div class="container">
+    <div class="page-header">
+        <h1>Odkrywaj ciekawe historie</h1>
+        <p style="color: rgba(255,255,255,0.8);">Najnowsze wpisy od naszej społeczności</p>
+    </div>
+
+    <div id="status" style="text-align: center; color: white;">Ładowanie...</div>
+
+    <div id="postsGrid" class="posts-grid"></div>
+</div>
 
 <script>
     async function loadPosts() {
-        const statusDiv = document.getElementById('status');
-        const ul = document.getElementById('posts');
+        const grid = document.getElementById('postsGrid');
+        const status = document.getElementById('status');
 
         try {
-            console.log('Próba pobrania postów...');
             const res = await fetch('http://localhost:3000/api/posts');
-            console.log('Response status:', res.status);
-
-            if (!res.ok) {
-                throw new Error(`HTTP error! status: ${res.status}`);
-            }
-
+            if (!res.ok) throw new Error('Błąd pobierania');
             const posts = await res.json();
-            console.log('Pobrane posty:', posts);
 
-            statusDiv.style.display = 'none';
-            ul.innerHTML = '';
+            status.style.display = 'none';
 
             if (posts.length === 0) {
-                ul.innerHTML = '<li>Brak postów do wyświetlenia</li>';
+                status.style.display = 'block';
+                status.textContent = 'Brak postów.';
                 return;
             }
 
             posts.forEach(post => {
-                const li = document.createElement('li');
+                // Tworzenie karty posta
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.onclick = () => window.location.href = `post.html?id=${post.id}`;
 
-                const titleSpan = document.createElement('span');
-                titleSpan.textContent = post.title;
-                titleSpan.className = 'post-title';
+                // Skracanie treści do podglądu
+                const excerpt = post.content.length > 100
+                    ? post.content.substring(0, 100) + '...'
+                    : post.content;
 
-                const authorSpan = document.createElement('span');
-                authorSpan.textContent = post.author_name ? ` - ${post.author_name}` : ' - Brak autora';
-                authorSpan.className = 'post-author';
+                const date = new Date(post.created_at).toLocaleDateString('pl-PL');
 
-                li.appendChild(titleSpan);
-                li.appendChild(authorSpan);
-                li.style.cursor = 'pointer';
-                li.onclick = () => {
-                    window.location.href = `post.html?id=${post.id}`;
-                };
-                ul.appendChild(li);
+                card.innerHTML = `
+                        <div>
+                            <div class="card-title">${post.title}</div>
+                            <div class="card-excerpt">${excerpt}</div>
+                        </div>
+                        <div class="card-meta">
+                            <span class="author-badge">@${post.author_name || 'Anonim'}</span>
+                            <span>${date}</span>
+                        </div>
+                    `;
+                grid.appendChild(card);
             });
+
         } catch (error) {
-            console.error('Błąd podczas ładowania postów:', error);
-            statusDiv.textContent = 'Błąd: ' + error.message;
-            statusDiv.style.color = 'red';
-            ul.innerHTML = '<li>Nie można załadować postów. Sprawdź czy backend działa na localhost:3000</li>';
+            console.error(error);
+            status.textContent = 'Nie udało się załadować postów. Upewnij się, że serwer działa.';
         }
     }
-
     loadPosts();
 </script>
 </body>

@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <title>Profil Autora</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .profile-header {
+            background: var(--glass);
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            margin-bottom: 40px;
+            box-shadow: var(--shadow);
+        }
+        .profile-avatar {
+            font-size: 4rem;
+            margin-bottom: 10px;
+        }
+        .profile-stats {
+            margin-top: 20px;
+            color: var(--text-light);
+        }
+    </style>
+</head>
+<body>
+<nav class="navbar">
+    <a href="index.html" class="logo">BlogApp ✨</a>
+    <div class="nav-links">
+        <a href="users.html">← Wróć do listy</a>
+    </div>
+</nav>
+
+<div class="container">
+    <div class="profile-header">
+        <div class="profile-avatar">👤</div>
+        <h1 id="userName" style="color: var(--text-dark); text-shadow: none; margin: 0;">Ładowanie...</h1>
+        <div class="profile-stats">
+            <span id="userEmail">-</span> • Dołączył: <span id="userDate">-</span>
+        </div>
+    </div>
+
+    <h2 style="margin-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.3); padding-bottom: 10px;">
+        Posty tego autora
+    </h2>
+
+    <div id="userPostsGrid" class="posts-grid">
+        <p style="color: white;">Ładowanie postów...</p>
+    </div>
+</div>
+
+<script>
+    const params = new URLSearchParams(window.location.search);
+    const userId = params.get('id');
+
+    async function loadProfile() {
+        if (!userId) return window.location.href = 'users.html';
+
+        try {
+            const userRes = await fetch(`http://localhost:3000/api/users/${userId}`);
+            if (!userRes.ok) throw new Error('Błąd pobierania usera');
+            const user = await userRes.json();
+
+            document.getElementById('userName').textContent = user.username;
+            document.getElementById('userEmail').textContent = user.email; // Opcjonalnie ukryj email
+            document.getElementById('userDate').textContent = new Date(user.created_at).toLocaleDateString();
+
+            const postsRes = await fetch(`http://localhost:3000/api/posts/user/${userId}`);
+            const posts = await postsRes.json();
+
+            const grid = document.getElementById('userPostsGrid');
+            grid.innerHTML = '';
+
+            if (posts.length === 0) {
+                grid.innerHTML = '<p style="color: white;">Ten autor nie napisał jeszcze żadnego posta.</p>';
+                return;
+            }
+
+            posts.forEach(post => {
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.onclick = () => window.location.href = `post.html?id=${post.id}`;
+
+                const excerpt = post.content.length > 80 ? post.content.substring(0, 80) + '...' : post.content;
+
+                card.innerHTML = `
+                        <div>
+                            <div class="card-title">${post.title}</div>
+                            <div class="card-excerpt">${excerpt}</div>
+                        </div>
+                        <div class="card-meta">
+                            <span>${new Date(post.created_at).toLocaleDateString()}</span>
+                            <span>→ Czytaj</span>
+                        </div>
+                    `;
+                grid.appendChild(card);
+            });
+
+        } catch (error) {
+            console.error(error);
+            document.querySelector('.container').innerHTML = '<h1 style="text-align:center;">Nie znaleziono autora</h1>';
+        }
+    }
+
+    loadProfile();
+</script>
+</body>
+</html>

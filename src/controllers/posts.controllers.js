@@ -1,10 +1,11 @@
 const { createPost, getPosts, getPostById, deletePost, updatePost, getPostsByAuthorId } = require('../services/posts.services');
 
 const addPost = async (req, res) => {
-    const { title, content, authorId } = req.body;
+    const { title, content } = req.body;
+    const authorId = req.user.userId;
 
     if (!title || !content) {
-        return res.status(400).json({ error: 'Title i content są wymagane' });
+        return res.status(400).json({ error: 'Title and content are required' });
     }
 
     try {
@@ -51,16 +52,23 @@ const getPost = async (req, res) => {
 
 const removePost = async (req, res) => {
     const { id } = req.params;
+    const userId = req.user.userId;
 
     if (isNaN(id)) {
         return res.status(400).json({ error: 'Incorrect id' });
     }
 
     try {
-        const deleted = await deletePost(id);
-        if (!deleted) {
+        const post = await getPostById(id);
+        if (!post) {
             return res.status(404).json({ error: 'Post doesn\'t exist' });
         }
+
+        if (post.author_id !== userId) {
+            return res.status(403).json({ error: 'You can only delete your own posts' });
+        }
+
+        const deleted = await deletePost(id);
         res.status(200).json({ message: 'Post successfully deleted', post: deleted });
     } catch (err) {
         console.error('Error during deleting post:', err);
@@ -71,6 +79,7 @@ const removePost = async (req, res) => {
 const editPost = async (req, res) => {
     const postId = parseInt(req.params.id);
     const { title, content } = req.body;
+    const userId = req.user.userId;
 
     if (isNaN(postId)) {
         return res.status(400).json({ error: 'Incorrect post id' });
@@ -79,11 +88,18 @@ const editPost = async (req, res) => {
     if (!title || !content) {
         return res.status(400).json({ error: 'Title and content are required' });
     }
+
     try {
-        const updated = await updatePost(postId, title, content);
-        if (!updated) {
+        const post = await getPostById(postId);
+        if (!post) {
             return res.status(404).json({ error: 'Post doesn\'t exist' });
         }
+
+        if (post.author_id !== userId) {
+            return res.status(403).json({ error: 'You can only edit your own posts' });
+        }
+
+        const updated = await updatePost(postId, title, content);
         res.status(200).json(updated);
     } catch (err) {
         console.error('Error:', err);
@@ -98,7 +114,8 @@ const listAuthorPosts = async (req, res) => {
         res.status(200).json(posts);
     } catch (err) {
         console.error(err);
-        res.status(500).json({ error: 'Błąd serwera' });
+        res.status(500).json({ error: 'Server error' });
     }
 };
-module.exports = { addPost, listPosts, getPost, removePost, editPost, listAuthorPosts};
+
+module.exports = { addPost, listPosts, getPost, removePost, editPost, listAuthorPosts };

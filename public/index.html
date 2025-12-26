@@ -3,81 +3,325 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BlogApp - Główna</title>
-    <link rel="stylesheet" href="style.css">
+    <title>Test API</title>
+    <style>
+        body { font-family: sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; background-color: #f4f4f4; }
+        .container { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        h1, h2, h3 { color: #333; }
+        input, textarea { width: 100%; padding: 8px; margin: 5px 0; box-sizing: border-box; }
+        button { background-color: #007BFF; color: white; border: none; padding: 10px 15px; cursor: pointer; margin-top: 5px; }
+        button:hover { background-color: #0056b3; }
+        button.delete { background-color: #dc3545; }
+        button.delete:hover { background-color: #a71d2a; }
+
+        .hidden { display: none; }
+        .post { border: 1px solid #ddd; padding: 15px; margin-bottom: 15px; border-radius: 5px; background: #fff; }
+        .post-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 10px; }
+        .comments-section { margin-top: 15px; padding-top: 10px; border-top: 1px dashed #ccc; background-color: #f9f9f9; padding: 10px; }
+        .comment { font-size: 0.9em; margin-bottom: 8px; padding: 5px; background: white; border: 1px solid #eee; }
+        .error { color: red; font-weight: bold; margin: 10px 0; }
+        .success { color: green; font-weight: bold; margin: 10px 0; }
+    </style>
 </head>
 <body>
 
-<nav class="navbar">
-    <a href="index.html" class="logo">BlogApp ✨</a>
-    <div class="nav-links">
-        <a href="index.html">Posty</a>
-        <a href="users.html">Autorzy</a>
-        <a href="login.html" class="btn-auth">Zaloguj</a>
-    </div>
-</nav>
-
 <div class="container">
-    <div class="page-header">
-        <h1>Odkrywaj ciekawe historie</h1>
-        <p style="color: rgba(255,255,255,0.8);">Najnowsze wpisy od naszej społeczności</p>
+    <h1>Test Frontend dla API</h1>
+    <div id="message-box"></div>
+
+    <div id="auth-section">
+        <div style="display: flex; gap: 20px;">
+            <div style="flex: 1;">
+                <h3>Logowanie</h3>
+                <input type="email" id="login-email" placeholder="Email">
+                <input type="password" id="login-password" placeholder="Hasło">
+                <button onclick="login()">Zaloguj</button>
+            </div>
+            <div style="flex: 1; border-left: 1px solid #ccc; padding-left: 20px;">
+                <h3>Rejestracja</h3>
+                <input type="text" id="reg-username" placeholder="Username">
+                <input type="email" id="reg-email" placeholder="Email">
+                <input type="password" id="reg-password" placeholder="Hasło (min. 6 znaków)">
+                <button onclick="register()">Zarejestruj</button>
+            </div>
+        </div>
     </div>
 
-    <div id="status" style="text-align: center; color: white;">Ładowanie...</div>
+    <div id="main-section" class="hidden">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <h3 id="user-greeting">Witaj!</h3>
+            <button onclick="logout()" style="background-color: #6c757d;">Wyloguj</button>
+        </div>
+        <hr>
 
-    <div id="postsGrid" class="posts-grid"></div>
+        <div style="background: #e9ecef; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
+            <h3>Dodaj nowy post</h3>
+            <input type="text" id="post-title" placeholder="Tytuł posta">
+            <textarea id="post-content" rows="3" placeholder="Treść posta..."></textarea>
+            <button onclick="createPost()">Opublikuj post</button>
+        </div>
+
+        <h2>Lista Postów</h2>
+        <button onclick="loadPosts()" style="margin-bottom: 10px;">Odśwież listę</button>
+        <div id="posts-container">
+        </div>
+    </div>
 </div>
 
 <script>
-    async function loadPosts() {
-        const grid = document.getElementById('postsGrid');
-        const status = document.getElementById('status');
+    // ADRES BACKENDU - upewnij się, że port się zgadza
+    const API_URL = 'http://localhost:3000/api';
+
+    // --- AUTH ---
+
+    function getToken() {
+        return localStorage.getItem('token');
+    }
+
+    function checkAuth() {
+        const token = getToken();
+        const authSection = document.getElementById('auth-section');
+        const mainSection = document.getElementById('main-section');
+
+        if (token) {
+            authSection.classList.add('hidden');
+            mainSection.classList.remove('hidden');
+            document.getElementById('user-greeting').innerText = `Zalogowany jako: ${localStorage.getItem('username') || 'Użytkownik'}`;
+            loadPosts();
+        } else {
+            authSection.classList.remove('hidden');
+            mainSection.classList.add('hidden');
+        }
+    }
+
+    async function register() {
+        const username = document.getElementById('reg-username').value;
+        const email = document.getElementById('reg-email').value;
+        const password = document.getElementById('reg-password').value;
 
         try {
-            const res = await fetch('http://localhost:3000/api/posts');
-            if (!res.ok) throw new Error('Błąd pobierania');
+            const res = await fetch(`${API_URL}/users/register`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, email, password })
+            });
+            const data = await res.json();
+
+            if (res.ok) {
+                showMessage('Rejestracja udana! Możesz się zalogować.', 'success');
+            } else {
+                showMessage(data.error || 'Błąd rejestracji', 'error');
+            }
+        } catch (err) {
+            console.error(err);
+            showMessage('Błąd połączenia z serwerem', 'error');
+        }
+    }
+
+    async function login() {
+        const email = document.getElementById('login-email').value;
+        const password = document.getElementById('login-password').value;
+
+        try {
+            const res = await fetch(`${API_URL}/users/login`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password })
+            });
+            const data = await res.json();
+
+            if (res.ok) {
+                localStorage.setItem('token', data.token);
+                localStorage.setItem('userId', data.user.id);
+                localStorage.setItem('username', data.user.username); // backend zwraca user object
+                showMessage('Zalogowano pomyślnie!', 'success');
+                checkAuth();
+            } else {
+                showMessage(data.error || 'Błąd logowania', 'error');
+            }
+        } catch (err) {
+            console.error(err);
+            showMessage('Błąd połączenia z serwerem', 'error');
+        }
+    }
+
+    function logout() {
+        localStorage.removeItem('token');
+        localStorage.removeItem('userId');
+        localStorage.removeItem('username');
+        checkAuth();
+        showMessage('Wylogowano.', 'success');
+    }
+
+    // --- POSTY ---
+
+    async function loadPosts() {
+        const container = document.getElementById('posts-container');
+        container.innerHTML = '<p>Ładowanie...</p>';
+
+        try {
+            const res = await fetch(`${API_URL}/posts`);
             const posts = await res.json();
 
-            status.style.display = 'none';
+            container.innerHTML = '';
 
             if (posts.length === 0) {
-                status.style.display = 'block';
-                status.textContent = 'Brak postów.';
+                container.innerHTML = '<p>Brak postów.</p>';
                 return;
             }
 
             posts.forEach(post => {
-                // Tworzenie karty posta
-                const card = document.createElement('div');
-                card.className = 'card';
-                card.onclick = () => window.location.href = `post.html?id=${post.id}`;
+                const isMyPost = post.author_id == localStorage.getItem('userId');
 
-                // Skracanie treści do podglądu
-                const excerpt = post.content.length > 100
-                    ? post.content.substring(0, 100) + '...'
-                    : post.content;
-
-                const date = new Date(post.created_at).toLocaleDateString('pl-PL');
-
-                card.innerHTML = `
-                        <div>
-                            <div class="card-title">${post.title}</div>
-                            <div class="card-excerpt">${excerpt}</div>
+                const div = document.createElement('div');
+                div.className = 'post';
+                div.innerHTML = `
+                        <div class="post-header">
+                            <div>
+                                <strong>${post.title}</strong> <br>
+                                <small>Autor: ${post.author_name || 'Nieznany'} | Data: ${new Date(post.created_at).toLocaleString()}</small>
+                            </div>
+                            ${isMyPost ? `<button class="delete" onclick="deletePost(${post.id})">Usuń</button>` : ''}
                         </div>
-                        <div class="card-meta">
-                            <span class="author-badge">@${post.author_name || 'Anonim'}</span>
-                            <span>${date}</span>
+                        <p>${post.content}</p>
+
+                        <div class="comments-section">
+                            <h4>Komentarze</h4>
+                            <div id="comments-list-${post.id}">
+                                <button onclick="loadComments(${post.id})">Załaduj komentarze</button>
+                            </div>
+                            <div style="margin-top: 10px; display: flex; gap: 5px;">
+                                <input type="text" id="comment-input-${post.id}" placeholder="Napisz komentarz...">
+                                <button onclick="addComment(${post.id})">Dodaj</button>
+                            </div>
                         </div>
                     `;
-                grid.appendChild(card);
+                container.appendChild(div);
             });
 
-        } catch (error) {
-            console.error(error);
-            status.textContent = 'Nie udało się załadować postów. Upewnij się, że serwer działa.';
+        } catch (err) {
+            console.error(err);
+            container.innerHTML = '<p style="color:red">Błąd pobierania postów.</p>';
         }
     }
-    loadPosts();
+
+    async function createPost() {
+        const title = document.getElementById('post-title').value;
+        const content = document.getElementById('post-content').value;
+        const token = getToken();
+
+        if (!title || !content) return showMessage('Wypełnij tytuł i treść', 'error');
+
+        try {
+            const res = await fetch(`${API_URL}/posts`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ title, content })
+            });
+
+            if (res.ok) {
+                document.getElementById('post-title').value = '';
+                document.getElementById('post-content').value = '';
+                loadPosts(); // Odśwież listę
+                showMessage('Post dodany!', 'success');
+            } else {
+                const data = await res.json();
+                showMessage(data.error || 'Błąd dodawania posta', 'error');
+            }
+        } catch (err) {
+            showMessage('Błąd serwera', 'error');
+        }
+    }
+
+    async function deletePost(id) {
+        if(!confirm('Czy na pewno chcesz usunąć post?')) return;
+
+        const token = getToken();
+        try {
+            const res = await fetch(`${API_URL}/posts/${id}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            if (res.ok) {
+                loadPosts();
+                showMessage('Post usunięty', 'success');
+            } else {
+                const data = await res.json();
+                showMessage(data.error, 'error');
+            }
+        } catch (err) { showMessage('Błąd usuwania', 'error'); }
+    }
+
+    // --- KOMENTARZE ---
+
+    async function loadComments(postId) {
+        const listDiv = document.getElementById(`comments-list-${postId}`);
+        listDiv.innerHTML = 'Ładowanie...';
+
+        try {
+            const res = await fetch(`${API_URL}/comments/post/${postId}`);
+            const comments = await res.json();
+
+            listDiv.innerHTML = '';
+            if(comments.length === 0) {
+                listDiv.innerHTML = '<small>Brak komentarzy.</small>';
+                return;
+            }
+
+            comments.forEach(c => {
+                const div = document.createElement('div');
+                div.className = 'comment';
+                div.innerHTML = `<strong>${c.author_name || 'Ktoś'}:</strong> ${c.content}`;
+                listDiv.appendChild(div);
+            });
+
+        } catch (err) {
+            listDiv.innerHTML = '<small style="color:red">Błąd ładowania.</small>';
+        }
+    }
+
+    async function addComment(postId) {
+        const input = document.getElementById(`comment-input-${postId}`);
+        const content = input.value;
+        const token = getToken();
+
+        if (!content) return alert('Wpisz treść komentarza');
+
+        try {
+            const res = await fetch(`${API_URL}/comments`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ postId, content })
+            });
+
+            if (res.ok) {
+                input.value = '';
+                loadComments(postId); // Odśwież komentarze tylko dla tego posta
+            } else {
+                const data = await res.json();
+                alert(data.error || 'Błąd');
+            }
+        } catch (err) { alert('Błąd połączenia'); }
+    }
+
+    // --- UI UTILS ---
+
+    function showMessage(msg, type) {
+        const box = document.getElementById('message-box');
+        box.innerHTML = `<div class="${type}">${msg}</div>`;
+        setTimeout(() => box.innerHTML = '', 4000);
+    }
+
+    // Start aplikacji
+    checkAuth();
+
 </script>
 </body>
 </html>

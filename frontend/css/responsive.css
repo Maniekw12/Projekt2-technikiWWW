@@ -1,0 +1,83 @@
+
+@media (max-width: 968px) {
+    .main-content {
+        grid-template-columns: 1fr;
+    }
+
+    .sidebar {
+        position: static;
+    }
+}
+
+@media (max-width: 768px) {
+    .nav-container {
+        flex-wrap: wrap;
+        height: auto;
+        padding: 1rem 20px;
+    }
+
+    .nav-menu {
+        width: 100%;
+        flex-direction: column;
+        gap: 0.5rem;
+        margin-top: 1rem;
+    }
+
+    .container {
+        padding: 1rem 15px;
+    }
+
+    .post-title {
+        font-size: 1.25rem;
+    }
+
+    .post-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .post-actions {
+        margin-top: 0.5rem;
+    }
+
+    .footer-content {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .auth-container {
+        margin: 2rem auto;
+        padding: 0 15px;
+    }
+
+    .card {
+        padding: 1rem;
+    }
+
+    .comment-form {
+        flex-direction: column;
+    }
+}
+
+@media (max-width: 480px) {
+    .nav-brand {
+        font-size: 1.25rem;
+    }
+
+    .btn {
+        padding: 0.5rem 0.75rem;
+        font-size: 0.8rem;
+    }
+
+    .post-card {
+        padding: 1rem;
+    }
+
+    .auth-card {
+        padding: 1.5rem;
+    }
+
+    .auth-title {
+        font-size: 1.5rem;
+    }
+}

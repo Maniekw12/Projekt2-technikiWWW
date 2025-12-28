@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Użytkownicy - Forum</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/responsive.css">
+</head>
+<body>
+<!-- Navbar -->
+<nav class="navbar">
+    <div class="nav-container">
+        <a href="/index.html" class="nav-brand">💬 Forum</a>
+        <ul class="nav-menu">
+            <li><a href="/index.html" class="nav-link">Strona główna</a></li>
+            <li><a href="/users.html" class="nav-link active">Użytkownicy</a></li>
+            <li><a href="/about.html" class="nav-link">O nas</a></li>
+            <li id="auth-links">
+                <a href="/login.html" class="nav-link">Logowanie</a>
+                <a href="/register.html" class="nav-link">Rejestracja</a>
+            </li>
+            <li id="user-links" class="hidden">
+                <span class="user-badge">👤 <span id="username-display"></span></span>
+                <a href="/profile.html" class="nav-link">Profil</a>
+                <a href="#" onclick="logout()" class="nav-link">Wyloguj</a>
+            </li>
+        </ul>
+    </div>
+</nav>
+
+<!-- Main Content -->
+<div class="container">
+    <div id="message-box"></div>
+
+    <div class="card">
+        <div class="card-header">
+            <h1 class="card-title" style="font-size: 2rem;">👥 Użytkownicy Forum</h1>
+            <button onclick="loadUsers()" class="btn btn-outline">🔄 Odśwież</button>
+        </div>
+
+        <!-- Search Bar -->
+        <div style="margin-bottom: 1.5rem;">
+            <input
+                    type="text"
+                    id="search-input"
+                    class="form-input"
+                    placeholder="🔍 Szukaj użytkownika po nazwie..."
+                    onkeyup="filterUsers()"
+            >
+        </div>
+
+        <!-- Users Grid -->
+        <div id="users-container">
+            <div class="loading">Ładowanie użytkowników...</div>
+        </div>
+    </div>
+</div>
+
+<!-- Footer -->
+<footer class="footer">
+    <div class="footer-content">
+        <p class="footer-text">© 2025 Forum. Wszelkie prawa zastrzeżone.</p>
+        <div class="footer-links">
+            <a href="/about.html" class="footer-link">O nas</a>
+        </div>
+    </div>
+</footer>
+<!-- Scripts -->
+<script src="/js/api.js"></script>
+<script src="/js/auth.js"></script>
+<script>
+    let allUsers = [];
+
+    // Load users
+    const loadUsers = async () => {
+        const container = document.getElementById('users-container');
+        container.innerHTML = '<div class="loading">Ładowanie użytkowników...</div>';
+
+        const result = await usersAPI.getAll();
+
+        if (!result.success) {
+            container.innerHTML = '<div class="empty-state">❌ Błąd ładowania użytkowników</div>';
+            return;
+        }
+
+        allUsers = result.data;
+        displayUsers(allUsers);
+    };
+
+    // Display users
+    const displayUsers = (users) => {
+        const container = document.getElementById('users-container');
+
+        if (users.length === 0) {
+            container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">👥</div>
+                        <p>Nie znaleziono użytkowników</p>
+                    </div>
+                `;
+            return;
+        }
+
+        container.innerHTML = `
+                <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.5rem;">
+                    ${users.map(user => `
+                        <div class="card" style="margin: 0; transition: transform 0.3s; cursor: pointer;" onclick="viewUserProfile(${user.id})">
+                            <div style="text-align: center;">
+                                <div style="width: 80px; height: 80px; border-radius: 50%; background: linear-gradient(135deg, var(--primary-color), var(--primary-hover)); display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem; font-size: 2rem; color: white;">
+                                    ${user.username.charAt(0).toUpperCase()}
+                                </div>
+                                <h3 style="font-size: 1.25rem; font-weight: 600; margin-bottom: 0.5rem; color: var(--text-primary);">
+                                    ${user.username}
+                                </h3>
+                                <div style="display: flex; justify-content: center; gap: 1rem; color: var(--text-secondary); font-size: 0.875rem; margin-bottom: 1rem;">
+                                    <span>📝 ${user.post_count || 0} postów</span>
+                                </div>
+                                <p style="color: var(--text-secondary); font-size: 0.875rem;">
+                                    Dołączył ${formatDate(user.created_at)}
+                                </p>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+
+        // Add hover effect
+        document.querySelectorAll('.card[onclick]').forEach(card => {
+            card.addEventListener('mouseenter', () => {
+                card.style.transform = 'translateY(-4px)';
+                card.style.boxShadow = 'var(--shadow-lg)';
+            });
+            card.addEventListener('mouseleave', () => {
+                card.style.transform = 'translateY(0)';
+                card.style.boxShadow = 'var(--shadow)';
+            });
+        });
+    };
+
+    // Filter users
+    const filterUsers = () => {
+        const searchTerm = document.getElementById('search-input').value.toLowerCase();
+        const filteredUsers = allUsers.filter(user =>
+            user.username.toLowerCase().includes(searchTerm)
+        );
+        displayUsers(filteredUsers);
+    };
+
+    // View user profile
+    const viewUserProfile = (userId) => {
+        window.location.href = `/user-profile.html?id=${userId}`;
+    };
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', () => {
+        loadUsers();
+    });
+</script>
+</body>
+</html>

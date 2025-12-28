@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Logowanie - Forum</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/responsive.css">
+</head>
+<body>
+<!-- Navbar -->
+<nav class="navbar">
+    <div class="nav-container">
+        <a href="/index.html" class="nav-brand">💬 Forum</a>
+        <ul class="nav-menu">
+            <li><a href="/index.html" class="nav-link">Strona główna</a></li>
+            <li><a href="/users.html" class="nav-link">Użytkownicy</a></li>
+            <li><a href="/about.html" class="nav-link">O nas</a></li>
+            <li><a href="/login.html" class="nav-link active">Logowanie</a></li>
+            <li><a href="/register.html" class="nav-link">Rejestracja</a></li>
+        </ul>
+    </div>
+</nav>
+
+<!-- Main Content -->
+<div class="container">
+    <div class="auth-container">
+        <div class="auth-card">
+            <div class="auth-header">
+                <h1 class="auth-title">Witaj ponownie!</h1>
+                <p class="auth-subtitle">Zaloguj się do swojego konta</p>
+            </div>
+
+            <div id="message-box"></div>
+
+            <form id="login-form">
+                <div class="form-group">
+                    <label class="form-label" for="email">Email</label>
+                    <input type="email" id="email" class="form-input" placeholder="twoj@email.com" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="password">Hasło</label>
+                    <input type="password" id="password" class="form-input" placeholder="••••••••" required>
+                </div>
+
+                <button type="submit" class="btn btn-primary" style="width: 100%;">
+                    Zaloguj się
+                </button>
+            </form>
+
+            <div class="auth-footer">
+                <p>Nie masz konta? <a href="/register.html" class="auth-link">Zarejestruj się</a></p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Footer -->
+<footer class="footer">
+    <div class="footer-content">
+        <p class="footer-text">© 2025 Forum. Wszelkie prawa zastrzeżone.</p>
+        <div class="footer-links">
+            <a href="/about.html" class="footer-link">O nas</a>
+        </div>
+    </div>
+</footer>
+<!-- Scripts -->
+<script src="/js/api.js"></script>
+<script src="/js/auth.js"></script>
+<script>
+    // Redirect if already logged in
+    if (isAuthenticated()) {
+        window.location.href = '/index.html';
+    }
+
+    // Handle login
+    document.getElementById('login-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
+
+        const result = await authAPI.login(email, password);
+
+        if (result.success) {
+            setAuthData(
+                result.data.token,
+                result.data.user.id,
+                result.data.user.username
+            );
+            showMessage('Zalogowano pomyślnie! Przekierowanie...', 'success');
+            setTimeout(() => {
+                window.location.href = '/index.html';
+            }, 1000);
+        } else {
+            showMessage(result.error, 'error');
+        }
+    });
+</script>
+</body>
+</html>

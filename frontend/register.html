@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rejestracja - Forum</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/responsive.css">
+</head>
+<body>
+<!-- Navbar -->
+<nav class="navbar">
+    <div class="nav-container">
+        <a href="/index.html" class="nav-brand">💬 Forum</a>
+        <ul class="nav-menu">
+            <li><a href="/index.html" class="nav-link">Strona główna</a></li>
+            <li><a href="/users.html" class="nav-link">Użytkownicy</a></li>
+            <li><a href="/about.html" class="nav-link">O nas</a></li>
+            <li><a href="/login.html" class="nav-link">Logowanie</a></li>
+            <li><a href="/register.html" class="nav-link active">Rejestracja</a></li>
+        </ul>
+    </div>
+</nav>
+
+<!-- Main Content -->
+<div class="container">
+    <div class="auth-container">
+        <div class="auth-card">
+            <div class="auth-header">
+                <h1 class="auth-title">Dołącz do nas!</h1>
+                <p class="auth-subtitle">Utwórz nowe konto</p>
+            </div>
+
+            <div id="message-box"></div>
+
+            <form id="register-form">
+                <div class="form-group">
+                    <label class="form-label" for="username">Nazwa użytkownika</label>
+                    <input type="text" id="username" class="form-input" placeholder="TwojaNazwa" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="email">Email</label>
+                    <input type="email" id="email" class="form-input" placeholder="twoj@email.com" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="password">Hasło</label>
+                    <input type="password" id="password" class="form-input" placeholder="••••••••" required minlength="6">
+                    <small style="color: var(--text-secondary); font-size: 0.875rem;">Minimum 6 znaków</small>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="confirm-password">Potwierdź hasło</label>
+                    <input type="password" id="confirm-password" class="form-input" placeholder="••••••••" required minlength="6">
+                </div>
+
+                <button type="submit" class="btn btn-primary" style="width: 100%;">
+                    Zarejestruj się
+                </button>
+            </form>
+
+            <div class="auth-footer">
+                <p>Masz już konto? <a href="/login.html" class="auth-link">Zaloguj się</a></p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Footer -->
+<footer class="footer">
+    <div class="footer-content">
+        <p class="footer-text">© 2025 Forum. Wszelkie prawa zastrzeżone.</p>
+        <div class="footer-links">
+            <a href="/about.html" class="footer-link">O nas</a>
+        </div>
+    </div>
+</footer>
+<!-- Scripts -->
+<script src="/js/api.js"></script>
+<script src="/js/auth.js"></script>
+<script>
+    // Redirect if already logged in
+    if (isAuthenticated()) {
+        window.location.href = '/index.html';
+    }
+
+    // Handle registration
+    document.getElementById('register-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const username = document.getElementById('username').value;
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
+        const confirmPassword = document.getElementById('confirm-password').value;
+
+        // Validate passwords match
+        if (password !== confirmPassword) {
+            showMessage('Hasła nie są identyczne', 'error');
+            return;
+        }
+
+        // Validate password length
+        if (password.length < 6) {
+            showMessage('Hasło musi mieć minimum 6 znaków', 'error');
+            return;
+        }
+
+        const result = await authAPI.register(username, email, password);
+
+        if (result.success) {
+            showMessage('Rejestracja udana! Możesz się teraz zalogować.', 'success');
+            setTimeout(() => {
+                window.location.href = '/login.html';
+            }, 2000);
+        } else {
+            showMessage(result.error, 'error');
+        }
+    });
+</script>
+</body>
+</html>

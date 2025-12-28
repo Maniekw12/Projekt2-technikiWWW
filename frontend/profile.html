@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profil - Forum</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/responsive.css">
+</head>
+<body>
+<!-- Navbar -->
+<nav class="navbar">
+    <div class="nav-container">
+        <a href="/index.html" class="nav-brand">💬 Forum</a>
+        <ul class="nav-menu">
+            <li><a href="/index.html" class="nav-link">Strona główna</a></li>
+            <li><a href="/users.html" class="nav-link">Użytkownicy</a></li>
+            <li><a href="/about.html" class="nav-link">O nas</a></li>
+            <li id="auth-links">
+                <a href="/login.html" class="nav-link">Logowanie</a>
+                <a href="/register.html" class="nav-link">Rejestracja</a>
+            </li>
+            <li id="user-links" class="hidden">
+                <span class="user-badge">👤 <span id="username-display"></span></span>
+                <a href="/profile.html" class="nav-link active">Profil</a>
+                <a href="#" onclick="logout()" class="nav-link">Wyloguj</a>
+            </li>
+        </ul>
+    </div>
+</nav>
+
+<!-- Main Content -->
+<div class="container">
+    <div id="message-box"></div>
+
+    <div class="main-content">
+        <!-- Profile Info -->
+        <div>
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">👤 Twój Profil</h2>
+                </div>
+                <div id="profile-info">
+                    <div class="loading">Ładowanie profilu...</div>
+                </div>
+            </div>
+
+            <!-- User Posts -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">📝 Twoje Posty</h2>
+                    <button onclick="loadUserPosts()" class="btn btn-outline">🔄 Odśwież</button>
+                </div>
+                <div id="user-posts-container">
+                    <div class="loading">Ładowanie postów...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-card">
+                <h3 class="sidebar-title">Statystyki</h3>
+                <div style="color: var(--text-secondary);">
+                    <p style="margin-bottom: 0.5rem;">📝 Liczba postów: <strong id="posts-count">0</strong></p>
+                    <p>📅 Dołączył: <strong id="member-since">-</strong></p>
+                </div>
+            </div>
+
+            <div class="sidebar-card">
+                <h3 class="sidebar-title">Akcje</h3>
+                <button onclick="logout()" class="btn btn-secondary" style="width: 100%;">
+                    Wyloguj się
+                </button>
+            </div>
+        </aside>
+    </div>
+</div>
+
+<!-- Footer -->
+<footer class="footer">
+    <div class="footer-content">
+        <p class="footer-text">© 2025 Forum. Wszelkie prawa zastrzeżone.</p>
+        <div class="footer-links">
+            <a href="/about.html" class="footer-link">O nas</a>
+        </div>
+    </div>
+</footer>
+
+<!-- Scripts -->
+<script src="/js/api.js"></script>
+<script src="/js/auth.js"></script>
+<script>
+    // Check authentication
+    if (!requireAuth()) {
+        // Redirect handled by requireAuth
+    }
+
+    // Load profile
+    const loadProfile = async () => {
+        const container = document.getElementById('profile-info');
+        const userId = getUserId();
+
+        const result = await usersAPI.getById(userId);
+
+        if (!result.success) {
+            container.innerHTML = '<p style="color: var(--danger-color);">Błąd ładowania profilu</p>';
+            return;
+        }
+
+        const user = result.data;
+
+        container.innerHTML = `
+                <div style="padding: 1rem 0;">
+                    <div style="margin-bottom: 1rem;">
+                        <label style="font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 0.25rem;">
+                            Nazwa użytkownika
+                        </label>
+                        <p style="font-size: 1.125rem; font-weight: 600;">${user.username}</p>
+                    </div>
+                    <div style="margin-bottom: 1rem;">
+                        <label style="font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 0.25rem;">
+                            Email
+                        </label>
+                        <p style="font-size: 1.125rem;">${user.email}</p>
+                    </div>
+                    <div>
+                        <label style="font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 0.25rem;">
+                            Data rejestracji
+                        </label>
+                        <p style="font-size: 1.125rem;">${formatDate(user.created_at)}</p>
+                    </div>
+                </div>
+            `;
+
+        // Update sidebar
+        document.getElementById('member-since').textContent = new Date(user.created_at).toLocaleDateString('pl-PL');
+    };
+
+    // Load user posts
+    const loadUserPosts = async () => {
+        const container = document.getElementById('user-posts-container');
+        const userId = getUserId();
+
+        const result = await postsAPI.getByAuthor(userId);
+
+        if (!result.success) {
+            container.innerHTML = '<p style="color: var(--danger-color);">Błąd ładowania postów</p>';
+            return;
+        }
+
+        const posts = result.data;
+
+        // Update posts count
+        document.getElementById('posts-count').textContent = posts.length;
+
+        if (posts.length === 0) {
+            container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📭</div>
+                        <p>Nie masz jeszcze żadnych postów</p>
+                        <a href="/index.html" class="btn btn-primary" style="margin-top: 1rem;">Utwórz pierwszy post</a>
+                    </div>
+                `;
+            return;
+        }
+
+        container.innerHTML = posts.map(post => `
+                <div class="post-card">
+                    <div class="post-header">
+                        <div class="post-meta">
+                            <span class="post-date">${formatDate(post.created_at)}</span>
+                        </div>
+                    </div>
+                    <h3 class="post-title">${post.title}</h3>
+                    <p class="post-content">${post.content.substring(0, 150)}${post.content.length > 150 ? '...' : ''}</p>
+                    <div class="post-actions">
+                        <a href="/post.html?id=${post.id}" class="btn btn-primary">Zobacz post</a>
+                        <a href="/edit-post.html?id=${post.id}" class="btn btn-secondary">Edytuj</a>
+                        <button onclick="deletePost(${post.id})" class="btn btn-danger">Usuń</button>
+                    </div>
+                </div>
+            `).join('');
+    };
+
+    // Delete post
+    const deletePost = async (id) => {
+        if (!confirm('Czy na pewno chcesz usunąć ten post?')) return;
+
+        const result = await postsAPI.delete(id);
+
+        if (result.success) {
+            showMessage('Post został usunięty', 'success');
+            loadUserPosts();
+        } else {
+            showMessage(result.error, 'error');
+        }
+    };
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', () => {
+        loadProfile();
+        loadUserPosts();
+    });
+</script>
+</body>
+</html>

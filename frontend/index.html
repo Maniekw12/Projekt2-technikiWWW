@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Forum - Strona główna</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/responsive.css">
+</head>
+<body>
+<!-- Navbar -->
+<nav class="navbar">
+    <div class="nav-container">
+        <a href="/index.html" class="nav-brand">💬 Forum</a>
+        <ul class="nav-menu">
+            <li><a href="/index.html" class="nav-link active">Strona główna</a></li>
+            <li><a href="/users.html" class="nav-link">Użytkownicy</a></li>
+            <li><a href="/about.html" class="nav-link">O nas</a></li>
+            <li id="auth-links">
+                <a href="/login.html" class="nav-link">Logowanie</a>
+                <a href="/register.html" class="nav-link">Rejestracja</a>
+            </li>
+            <li id="user-links" class="hidden">
+                <span class="user-badge">👤 <span id="username-display"></span></span>
+                <a href="/profile.html" class="nav-link">Profil</a>
+                <a href="#" onclick="logout()" class="nav-link">Wyloguj</a>
+            </li>
+        </ul>
+    </div>
+</nav>
+
+<!-- Main Content -->
+<div class="container">
+    <div id="message-box"></div>
+
+    <div class="main-content">
+        <!-- Posts Section -->
+        <div>
+            <!-- Create Post Form -->
+            <div id="create-post-section" class="card hidden">
+                <div class="card-header">
+                    <h2 class="card-title">Utwórz nowy post</h2>
+                </div>
+                <form id="create-post-form">
+                    <div class="form-group">
+                        <label class="form-label" for="post-title">Tytuł</label>
+                        <input type="text" id="post-title" class="form-input" placeholder="Wprowadź tytuł posta..." required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="post-content">Treść</label>
+                        <textarea id="post-content" class="form-textarea" placeholder="Napisz coś..." required></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Opublikuj post</button>
+                </form>
+            </div>
+
+            <!-- Posts List -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Najnowsze posty</h2>
+                    <button onclick="loadPosts()" class="btn btn-outline">🔄 Odśwież</button>
+                </div>
+                <div id="posts-container">
+                    <div class="loading">Ładowanie postów...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-card">
+                <h3 class="sidebar-title">O Forum</h3>
+                <p style="color: var(--text-secondary); margin-bottom: 1rem;">
+                    Miejsce do dzielenia się przemyśleniami i dyskusji z innymi użytkownikami.
+                </p>
+                <a href="/register.html" class="btn btn-primary" style="width: 100%; text-align: center;">
+                    Dołącz do nas
+                </a>
+            </div>
+
+            <div class="sidebar-card">
+                <h3 class="sidebar-title">Statystyki</h3>
+                <div style="color: var(--text-secondary);">
+                    <p style="margin-bottom: 0.5rem;">📝 Posty: <strong id="posts-count">0</strong></p>
+                    <p>👥 Użytkownicy: <strong id="users-count">0</strong></p>
+                </div>
+            </div>
+        </aside>
+    </div>
+</div>
+
+<!-- Footer -->
+<footer class="footer">
+    <div class="footer-content">
+        <p class="footer-text">© 2025 Forum. Wszelkie prawa zastrzeżone.</p>
+        <div class="footer-links">
+            <a href="/about.html" class="footer-link">O nas</a>
+        </div>
+    </div>
+</footer>
+<!-- Scripts -->
+<script src="/js/api.js"></script>
+<script src="/js/auth.js"></script>
+<script>
+    // Load posts
+    const loadPosts = async () => {
+        const container = document.getElementById('posts-container');
+        container.innerHTML = '<div class="loading">Ładowanie postów...</div>';
+
+        const result = await postsAPI.getAll();
+
+        if (!result.success) {
+            container.innerHTML = '<div class="empty-state">❌ Błąd ładowania postów</div>';
+            return;
+        }
+
+        const posts = result.data;
+
+        if (posts.length === 0) {
+            container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📭</div>
+                        <p>Brak postów. Bądź pierwszy i utwórz post!</p>
+                    </div>
+                `;
+            return;
+        }
+
+        container.innerHTML = posts.map(post => {
+            const isMyPost = post.author_id == getUserId();
+            return `
+                    <div class="post-card">
+                        <div class="post-header">
+                            <div class="post-meta">
+                                <a href="#" class="post-author">${post.author_name || 'Użytkownik'}</a>
+                                <span class="post-date">${formatDate(post.created_at)}</span>
+                            </div>
+                        </div>
+                        <h3 class="post-title">${post.title}</h3>
+                        <p class="post-content">${post.content.substring(0, 200)}${post.content.length > 200 ? '...' : ''}</p>
+                        <div class="post-actions">
+                            <a href="/post.html?id=${post.id}" class="btn btn-primary">Czytaj więcej</a>
+                            ${isMyPost ? `<button onclick="deletePost(${post.id})" class="btn btn-danger">Usuń</button>` : ''}
+                        </div>
+                    </div>
+                `;
+        }).join('');
+    };
+
+    // Delete post
+    const deletePost = async (id) => {
+        if (!confirm('Czy na pewno chcesz usunąć ten post?')) return;
+
+        const result = await postsAPI.delete(id);
+
+        if (result.success) {
+            showMessage('Post został usunięty', 'success');
+            loadPosts();
+        } else {
+            showMessage(result.error, 'error');
+        }
+    };
+
+    // Create post
+    document.getElementById('create-post-form')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const title = document.getElementById('post-title').value;
+        const content = document.getElementById('post-content').value;
+
+        const result = await postsAPI.create(title, content);
+
+        if (result.success) {
+            showMessage('Post został utworzony!', 'success');
+            document.getElementById('post-title').value = '';
+            document.getElementById('post-content').value = '';
+            loadPosts();
+        } else {
+            showMessage(result.error, 'error');
+        }
+    });
+
+    // Load stats
+    const loadStats = async () => {
+        const postsResult = await postsAPI.getAll(1, 1000);
+        const usersResult = await usersAPI.getAll();
+
+        if (postsResult.success) {
+            document.getElementById('posts-count').textContent = postsResult.data.length;
+        }
+
+        if (usersResult.success) {
+            document.getElementById('users-count').textContent = usersResult.data.length;
+        }
+    };
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', () => {
+        loadPosts();
+        loadStats();
+
+        if (isAuthenticated()) {
+            document.getElementById('create-post-section').classList.remove('hidden');
+        }
+    });
+</script>
+</body>
+</html>

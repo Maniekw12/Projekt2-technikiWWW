@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Post - Forum</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/responsive.css">
+</head>
+<body>
+<!-- Navbar -->
+<nav class="navbar">
+    <div class="nav-container">
+        <a href="/index.html" class="nav-brand">💬 Forum</a>
+        <ul class="nav-menu">
+            <li><a href="/index.html" class="nav-link">Strona główna</a></li>
+            <li><a href="/users.html" class="nav-link">Użytkownicy</a></li>
+            <li><a href="/about.html" class="nav-link">O nas</a></li>
+            <li id="auth-links">
+                <a href="/login.html" class="nav-link">Logowanie</a>
+                <a href="/register.html" class="nav-link">Rejestracja</a>
+            </li>
+            <li id="user-links" class="hidden">
+                <span class="user-badge">👤 <span id="username-display"></span></span>
+                <a href="/profile.html" class="nav-link">Profil</a>
+                <a href="#" onclick="logout()" class="nav-link">Wyloguj</a>
+            </li>
+        </ul>
+    </div>
+</nav>
+
+<!-- Main Content -->
+<div class="container">
+    <div id="message-box"></div>
+
+    <!-- Back Button -->
+    <div style="margin-bottom: 1rem;">
+        <a href="/index.html" class="btn btn-outline">← Powrót do listy postów</a>
+    </div>
+
+    <!-- Post Content -->
+    <div id="post-container">
+        <div class="loading">Ładowanie posta...</div>
+    </div>
+
+    <!-- Comments Section -->
+    <div class="card comments-section" id="comments-section" style="display: none;">
+        <h3 style="margin-bottom: 1rem;">Komentarze</h3>
+
+        <!-- Add Comment Form -->
+        <div id="add-comment-form" class="hidden" style="margin-bottom: 2rem;">
+            <div class="comment-form">
+                <input type="text" id="comment-content" class="form-input" placeholder="Napisz komentarz...">
+                <button onclick="addComment()" class="btn btn-primary">Dodaj komentarz</button>
+            </div>
+        </div>
+
+        <!-- Comments List -->
+        <div id="comments-container">
+            <div class="loading">Ładowanie komentarzy...</div>
+        </div>
+    </div>
+</div>
+
+<!-- Footer -->
+<footer class="footer">
+    <div class="footer-content">
+        <p class="footer-text">© 2025 Forum. Wszelkie prawa zastrzeżone.</p>
+        <div class="footer-links">
+            <a href="/about.html" class="footer-link">O nas</a>
+        </div>
+    </div>
+</footer>
+
+<!-- Scripts -->
+<script src="/js/api.js"></script>
+<script src="/js/auth.js"></script>
+<script>
+    let currentPostId = null;
+
+    // Get post ID from URL
+    const urlParams = new URLSearchParams(window.location.search);
+    currentPostId = urlParams.get('id');
+
+    if (!currentPostId) {
+        window.location.href = '/index.html';
+    }
+
+    // Load post
+    const loadPost = async () => {
+        const container = document.getElementById('post-container');
+        const result = await postsAPI.getById(currentPostId);
+
+        if (!result.success) {
+            container.innerHTML = '<div class="card"><p style="color: var(--danger-color);">❌ Nie znaleziono posta</p></div>';
+            return;
+        }
+
+        const post = result.data;
+        const isMyPost = post.author_id == getUserId();
+
+        container.innerHTML = `
+                <div class="card">
+                    <div class="post-header">
+                        <div class="post-meta">
+                            <a href="#" class="post-author">${post.author_name || 'Użytkownik'}</a>
+                            <span class="post-date">${formatDate(post.created_at)}</span>
+                        </div>
+                        ${isMyPost ? `
+                            <div class="post-actions">
+                                <a href="/edit-post.html?id=${post.id}" class="btn btn-secondary">Edytuj post</a>
+                                <button onclick="deletePost()" class="btn btn-danger">Usuń post</button>
+                            </div>
+                        ` : ''}
+                    </div>
+                    <h1 class="post-title">${post.title}</h1>
+                    <p class="post-content" style="white-space: pre-wrap;">${post.content}</p>
+                </div>
+            `;
+
+        // Show comments section
+        document.getElementById('comments-section').style.display = 'block';
+        loadComments();
+
+        // Show add comment form if authenticated
+        if (isAuthenticated()) {
+            document.getElementById('add-comment-form').classList.remove('hidden');
+        }
+    };
+
+    // Load comments
+    const loadComments = async () => {
+        const container = document.getElementById('comments-container');
+        const result = await commentsAPI.getByPost(currentPostId);
+
+        if (!result.success) {
+            container.innerHTML = '<p style="color: var(--danger-color);">Błąd ładowania komentarzy</p>';
+            return;
+        }
+
+        const comments = result.data;
+
+        if (comments.length === 0) {
+            container.innerHTML = `
+                    <div class="empty-state">
+                        <p>💬 Brak komentarzy. Bądź pierwszy!</p>
+                    </div>
+                `;
+            return;
+        }
+
+        container.innerHTML = comments.map(comment => {
+            const isMyComment = comment.author_id == getUserId();
+            return `
+                    <div class="comment" id="comment-${comment.id}">
+                        <div class="comment-header">
+                            <span class="comment-author">${comment.author_name || 'Użytkownik'}</span>
+                            <div>
+                                <span class="comment-date">${formatDate(comment.created_at)}</span>
+                                ${isMyComment ? `
+                                    <button onclick="editComment(${comment.id}, '${comment.content.replace(/'/g, "\\'")}')" class="btn btn-secondary" style="margin-left: 0.5rem; padding: 0.25rem 0.5rem; font-size: 0.75rem;">
+                                        Edytuj
+                                    </button>
+                                    <button onclick="deleteComment(${comment.id})" class="btn btn-danger" style="margin-left: 0.5rem; padding: 0.25rem 0.5rem; font-size: 0.75rem;">
+                                        Usuń
+                                    </button>
+                                ` : ''}
+                            </div>
+                        </div>
+                        <p class="comment-content" id="comment-content-${comment.id}">${comment.content}</p>
+                        <div id="edit-form-${comment.id}" class="hidden" style="margin-top: 0.5rem;">
+                            <div style="display: flex; gap: 0.5rem;">
+                                <input type="text" id="edit-input-${comment.id}" class="form-input" value="${comment.content.replace(/"/g, '&quot;')}" style="flex: 1;">
+                                <button onclick="saveCommentEdit(${comment.id})" class="btn btn-primary" style="padding: 0.5rem 1rem;">Zapisz</button>
+                                <button onclick="cancelCommentEdit(${comment.id})" class="btn btn-outline" style="padding: 0.5rem 1rem;">Anuluj</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+        }).join('');
+    };
+
+    // Add comment
+    const addComment = async () => {
+        const content = document.getElementById('comment-content').value;
+
+        if (!content.trim()) {
+            showMessage('Wpisz treść komentarza', 'error');
+            return;
+        }
+
+        const result = await commentsAPI.create(currentPostId, content);
+
+        if (result.success) {
+            document.getElementById('comment-content').value = '';
+            showMessage('Komentarz dodany!', 'success');
+            loadComments();
+        } else {
+            showMessage(result.error, 'error');
+        }
+    };
+
+    // Delete comment
+    const deleteComment = async (id) => {
+        if (!confirm('Czy na pewno chcesz usunąć ten komentarz?')) return;
+
+        const result = await commentsAPI.delete(id);
+
+        if (result.success) {
+            showMessage('Komentarz usunięty', 'success');
+            loadComments();
+        } else {
+            showMessage(result.error, 'error');
+        }
+    };
+
+    // Edit comment
+    const editComment = (commentId, currentContent) => {
+        document.getElementById(`comment-content-${commentId}`).classList.add('hidden');
+        document.getElementById(`edit-form-${commentId}`).classList.remove('hidden');
+
+        document.getElementById(`edit-input-${commentId}`).focus();
+    };
+
+    // Save comment edit
+    const saveCommentEdit = async (commentId) => {
+        const newContent = document.getElementById(`edit-input-${commentId}`).value.trim();
+
+        if (!newContent) {
+            showMessage('Treść komentarza nie może być pusta', 'error');
+            return;
+        }
+
+        const result = await commentsAPI.update(commentId, newContent);
+
+        if (result.success) {
+            showMessage('Komentarz zaktualizowany', 'success');
+            loadComments();
+        } else {
+            showMessage(result.error, 'error');
+        }
+    };
+
+    // Cancel comment edit
+    const cancelCommentEdit = (commentId) => {
+        document.getElementById(`comment-content-${commentId}`).classList.remove('hidden');
+        document.getElementById(`edit-form-${commentId}`).classList.add('hidden');
+    };
+
+    // Delete post
+    const deletePost = async () => {
+        if (!confirm('Czy na pewno chcesz usunąć ten post?')) return;
+
+        const result = await postsAPI.delete(currentPostId);
+
+        if (result.success) {
+            showMessage('Post usunięty. Przekierowanie...', 'success');
+            setTimeout(() => {
+                window.location.href = '/index.html';
+            }, 1000);
+        } else {
+            showMessage(result.error, 'error');
+        }
+    };
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', () => {
+        loadPost();
+    });
+
+    // Add comment on Enter key
+    document.getElementById('comment-content')?.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            addComment();
+        }
+    });
+</script>
+</body>
+</html>

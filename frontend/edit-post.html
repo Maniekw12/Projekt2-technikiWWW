@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edytuj post - Forum</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/responsive.css">
+</head>
+<body>
+<!-- Navbar -->
+<nav class="navbar">
+    <div class="nav-container">
+        <a href="/index.html" class="nav-brand">💬 Forum</a>
+        <ul class="nav-menu">
+            <li><a href="/index.html" class="nav-link">Strona główna</a></li>
+            <li><a href="/users.html" class="nav-link">Użytkownicy</a></li>
+            <li><a href="/about.html" class="nav-link">O nas</a></li>
+            <li id="auth-links">
+                <a href="/login.html" class="nav-link">Logowanie</a>
+                <a href="/register.html" class="nav-link">Rejestracja</a>
+            </li>
+            <li id="user-links" class="hidden">
+                <span class="user-badge">👤 <span id="username-display"></span></span>
+                <a href="/profile.html" class="nav-link">Profil</a>
+                <a href="#" onclick="logout()" class="nav-link">Wyloguj</a>
+            </li>
+        </ul>
+    </div>
+</nav>
+
+<!-- Main Content -->
+<div class="container">
+    <div id="message-box"></div>
+
+    <!-- Back Button -->
+    <div style="margin-bottom: 1rem;">
+        <a href="#" onclick="history.back(); return false;" class="btn btn-outline">← Powrót</a>
+    </div>
+
+    <!-- Edit Form -->
+    <div class="card" style="max-width: 900px; margin: 0 auto;">
+        <div class="card-header">
+            <h1 class="card-title">✏️ Edytuj post</h1>
+        </div>
+
+        <div id="loading-section">
+            <div class="loading">Ładowanie posta...</div>
+        </div>
+
+        <form id="edit-post-form" class="hidden">
+            <div class="form-group">
+                <label class="form-label" for="post-title">Tytuł *</label>
+                <input type="text" id="post-title" class="form-input" placeholder="Wprowadź tytuł posta..." required>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="post-content">Treść *</label>
+                <textarea id="post-content" class="form-textarea" placeholder="Napisz coś..." required style="min-height: 300px;"></textarea>
+            </div>
+
+            <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                <button type="submit" class="btn btn-primary">
+                    💾 Zapisz zmiany
+                </button>
+                <button type="button" onclick="cancelEdit()" class="btn btn-outline">
+                    Anuluj
+                </button>
+                <div style="flex: 1;"></div>
+                <button type="button" onclick="deletePostFromEdit()" class="btn btn-danger">
+                    🗑️ Usuń post
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Footer -->
+<footer class="footer">
+    <div class="footer-content">
+        <p class="footer-text">© 2025 Forum. Wszelkie prawa zastrzeżone.</p>
+        <div class="footer-links">
+            <a href="/about.html" class="footer-link">O nas</a>
+        </div>
+    </div>
+</footer>
+
+<!-- Scripts -->
+<script src="/js/api.js"></script>
+<script src="/js/auth.js"></script>
+<script>
+    let currentPostId = null;
+    let originalPost = null;
+
+    // Check authentication
+    if (!requireAuth()) {
+    }
+
+    // Get post ID from URL
+    const urlParams = new URLSearchParams(window.location.search);
+    currentPostId = urlParams.get('id');
+
+    if (!currentPostId) {
+        window.location.href = '/index.html';
+    }
+
+    // Load post data
+    const loadPost = async () => {
+        const loadingSection = document.getElementById('loading-section');
+        const editForm = document.getElementById('edit-post-form');
+
+        const result = await postsAPI.getById(currentPostId);
+
+        if (!result.success) {
+            loadingSection.innerHTML = '<p style="color: var(--danger-color);">❌ Nie znaleziono posta</p>';
+            return;
+        }
+
+        const post = result.data;
+
+        // Check if user is the author
+        if (post.author_id != getUserId()) {
+            loadingSection.innerHTML = '<p style="color: var(--danger-color);">❌ Nie masz uprawnień do edycji tego posta</p>';
+            return;
+        }
+
+        // Store original post data
+        originalPost = post;
+
+        // Fill form
+        document.getElementById('post-title').value = post.title;
+        document.getElementById('post-content').value = post.content;
+
+        // Show form
+        loadingSection.classList.add('hidden');
+        editForm.classList.remove('hidden');
+    };
+
+    // Handle form submission
+    document.getElementById('edit-post-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const title = document.getElementById('post-title').value.trim();
+        const content = document.getElementById('post-content').value.trim();
+
+        if (!title || !content) {
+            showMessage('Tytuł i treść nie mogą być puste', 'error');
+            return;
+        }
+
+        // Check if anything changed
+        if (title === originalPost.title && content === originalPost.content) {
+            showMessage('Nie wprowadzono żadnych zmian', 'error');
+            return;
+        }
+
+        // Disable submit button
+        const submitBtn = e.target.querySelector('button[type="submit"]');
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Zapisywanie...';
+
+        const result = await postsAPI.update(currentPostId, title, content);
+
+        if (result.success) {
+            showMessage('Post został zaktualizowany!', 'success');
+            setTimeout(() => {
+                window.location.href = `/post.html?id=${currentPostId}`;
+            }, 1000);
+        } else {
+            showMessage(result.error, 'error');
+            submitBtn.disabled = false;
+            submitBtn.textContent = '💾 Zapisz zmiany';
+        }
+    });
+
+    // Cancel edit
+    const cancelEdit = () => {
+        if (confirm('Czy na pewno chcesz anulować? Niezapisane zmiany zostaną utracone.')) {
+            window.location.href = `/post.html?id=${currentPostId}`;
+        }
+    };
+
+    // Delete post from edit page
+    const deletePostFromEdit = async () => {
+        if (!confirm('Czy na pewno chcesz usunąć ten post? Ta operacja jest nieodwracalna!')) {
+            return;
+        }
+
+        const result = await postsAPI.delete(currentPostId);
+
+        if (result.success) {
+            showMessage('Post został usunięty. Przekierowanie...', 'success');
+            setTimeout(() => {
+                window.location.href = '/index.html';
+            }, 1000);
+        } else {
+            showMessage(result.error, 'error');
+        }
+    };
+
+    // Warn before leaving if changes were made
+    let formChanged = false;
+
+    document.getElementById('post-title').addEventListener('input', () => {
+        formChanged = true;
+    });
+
+    document.getElementById('post-content').addEventListener('input', () => {
+        formChanged = true;
+    });
+
+    window.addEventListener('beforeunload', (e) => {
+        if (formChanged && !document.getElementById('edit-post-form').classList.contains('hidden')) {
+            e.preventDefault();
+            e.returnValue = '';
+        }
+    });
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', () => {
+        loadPost();
+    });
+</script>
+</body>
+</html>

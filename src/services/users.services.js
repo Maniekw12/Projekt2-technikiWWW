@@ -6,17 +6,22 @@ const { JWT_SECRET } = require('../middlewares/auth.middleware');
 const SALT_ROUNDS = 10;
 
 const createUser = async (username, email, password) => {
-    const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
 
+    if (!email.includes('@')) {
+        throw new Error('Incorrect password format');
+    }
+    if (password.length < 6) {
+        throw new Error('Password must be at least 6 characters');
+    }
+
+    const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
     const result = await pool.query(usersQueries.create, [
         username,
         email,
         hashedPassword
     ]);
-
     return result.rows[0];
 };
-
 const loginUser = async (email, password) => {
     const result = await pool.query(usersQueries.findByEmail, [email]);
     const user = result.rows[0];

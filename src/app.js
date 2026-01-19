@@ -13,4 +13,11 @@ app.use('/api/posts', postRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/comments', commentRoutes);
 
+app.use((err, req, res, next) => {
+    const status = err.status || 500;
+    res.status(status).json({
+        error: err.message || 'Server error',
+    });
+});
+
 module.exports = app;

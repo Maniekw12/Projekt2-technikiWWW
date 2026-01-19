@@ -56,7 +56,7 @@ and run command:
 
 The backend handles database operations and authentication.
 ```bash
-  cd backend
+  cd src
   npm run dev
 ```
 
